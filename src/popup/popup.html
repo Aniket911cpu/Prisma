@@ -2,106 +2,74 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Prisma</title>
+  <title>Advanced Color Picker</title>
   <link rel="stylesheet" href="popup.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Material Icons for UI elements -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
-<body class="dark-mode">
+<body>
   <div class="app-container">
-    <!-- Header -->
-    <header class="glass-header">
-      <div class="brand">
-        <span class="material-icons-round logo-icon">palette</span>
-        <span class="brand-name">Prisma</span>
-      </div>
-      <button id="btn-settings" class="icon-btn" title="Settings">
-        <span class="material-icons-round">settings</span>
+    <header>
+      <h1><span class="logo-icon"></span>Color Picker</h1>
+      <button id="eyedropper-btn" class="icon-btn" title="Pick Color from Page">
+        <svg viewBox="0 0 24 24" width="20" height="20">
+            <path fill="currentColor" d="M17.5 5.5l-5 5 .7.7 5-5-.7-.7zm-8.8 8.8l-1.4 1.4L4 19l2.3-3.3 1.4-1.4.7.7zM20.7 4.3l-1-1c-.4-.4-1-.4-1.4 0l-1 .9-1.3 1.3-6.4 6.4-.7.7-2 2-2.8 2.8c-.4.4-.4 1 0 1.4l1 1c.4.4 1 .4 1.4 0l2.8-2.8 2-2 .7-.7 6.4-6.4 1.3-1.3.9-1c.4-.4.4-1.1 0-1.5zM6.5 17.5l1.4 1.4c-.1.1-.3.1-.4 0l-1-1c.1 0 .1-.3 0-.4z"/>
+        </svg>
+        <span>Pick Color</span>
       </button>
     </header>
 
-    <!-- Main Content -->
     <main>
-      <!-- Color Picker Section -->
-      <section class="picker-section">
-        <div class="color-preview-ring">
-          <div id="color-preview" class="color-preview"></div>
-          <button id="btn-pick" class="btn-pick">
-            <span class="material-icons-round">colorize</span>
-          </button>
-        </div>
-        <div class="hex-display">
-          <h1 id="hex-code">#FFFFFF</h1>
-          <button id="btn-copy" class="icon-btn-small" title="Copy">
-            <span class="material-icons-round">content_copy</span>
-          </button>
+      <!-- Current Color Display -->
+      <section class="color-display">
+        <div id="color-preview" class="preview-box"></div>
+        <div class="color-values">
+          <div class="value-row">
+            <span class="label">HEX</span>
+            <code id="hex-value">#FFFFFF</code>
+            <button class="copy-btn" data-target="hex-value" title="Copy HEX">📋</button>
+          </div>
+          <div class="value-row">
+            <span class="label">RGB</span>
+            <code id="rgb-value">rgb(255, 255, 255)</code>
+            <button class="copy-btn" data-target="rgb-value" title="Copy RGB">📋</button>
+          </div>
+          <div class="value-row">
+            <span class="label">HSL</span>
+            <code id="hsl-value">hsl(0, 0%, 100%)</code>
+            <button class="copy-btn" data-target="hsl-value" title="Copy HSL">📋</button>
+          </div>
         </div>
       </section>
 
-      <!-- Navigation Tabs -->
-      <nav class="tabs-nav">
-        <button class="tab-btn active" data-tab="history">History</button>
-        <button class="tab-btn" data-tab="palettes">Palettes</button>
-        <button class="tab-btn" data-tab="contrast">Contrast</button>
-      </nav>
-
-      <!-- Tab Content -->
-      <section class="tab-content">
-        <!-- History Tab -->
-        <div id="tab-history" class="tab-pane active">
-          <div id="history-list" class="color-grid">
-            <!-- Dynamic History Items -->
-            <div class="empty-state">No colors picked yet.</div>
-          </div>
+      <!-- Advanced Picker (Spectrum) -->
+      <section class="spectrum-picker">
+        <!-- We use a canvas for the spectrum -->
+        <div class="spectrum-container">
+            <canvas id="spectrum-canvas" width="280" height="150"></canvas>
+            <input type="range" id="hue-slider" min="0" max="360" value="0" class="hue-slider">
         </div>
+      </section>
 
-        <!-- Palettes Tab -->
-        <div id="tab-palettes" class="tab-pane">
-          <div class="palette-group">
-            <h3>Monochromatic</h3>
-            <div id="palette-mono" class="palette-row"></div>
-          </div>
-          <div class="palette-group">
-            <h3>Analogous</h3>
-            <div id="palette-analog" class="palette-row"></div>
-          </div>
-          <div class="palette-group">
-            <h3>Complementary</h3>
-            <div id="palette-comp" class="palette-row"></div>
-          </div>
-        </div>
+      <!-- Actions -->
+      <section class="actions">
+        <button id="analyze-btn" class="secondary-btn">Analyze Page Colors</button>
+      </section>
 
-        <!-- Contrast Tab -->
-        <div id="tab-contrast" class="tab-pane">
-            <div class="contrast-checker">
-                <div class="contrast-pair">
-                    <div class="contrast-swatch bg" id="contrast-bg">T</div>
-                    <div class="contrast-swatch fg" id="contrast-fg">T</div>
-                </div>
-                <div class="contrast-result">
-                    <span id="wcag-ratio">4.5:1</span>
-                    <span id="wcag-grade" class="badge">AA</span>
-                </div>
-            </div>
+      <!-- History -->
+      <section class="history-section">
+        <h3>History</h3>
+        <div id="color-history" class="history-grid">
+          <!-- History items injected here -->
         </div>
+      </section>
+      
+      <!-- Page Analysis Results (Hidden by default) -->
+      <section id="analysis-results" class="analysis-results hidden">
+          <h3>Dominant Colors</h3>
+          <div id="dominant-colors-grid" class="history-grid"></div>
       </section>
     </main>
-
-    <!-- Footer -->
-    <footer class="glass-footer">
-      <div id="rate-us-nudge" class="nudge hidden">
-        <span>Enjoying Prisma?</span>
-        <button id="btn-rate" class="btn-text">
-            <span class="material-icons-round">favorite</span> Rate Us
-        </button>
-      </div>
-      <button id="btn-share" class="btn-share">
-        <span class="material-icons-round">share</span> Share
-      </button>
-    </footer>
   </div>
-  <script type="module" src="popup.js"></script>
+  <script src="color_utils.js"></script>
+  <script src="popup.js"></script>
 </body>
 </html>

@@ -1,271 +1,202 @@
-import { hexToRgb, rgbToHex, generatePalettes, getContrastRatio } from '../utils/color-utils.js';
+// popup.js
 
-// DOM Elements
-const els = {
-    hexCode: document.getElementById('hex-code'),
-    colorPreview: document.getElementById('color-preview'),
-    btnPick: document.getElementById('btn-pick'),
-    btnCopy: document.getElementById('btn-copy'),
-    btnSettings: document.getElementById('btn-settings'),
-    tabs: document.querySelectorAll('.tab-btn'),
-    tabPanes: document.querySelectorAll('.tab-pane'),
-    historyList: document.getElementById('history-list'),
-    palettes: {
-        mono: document.getElementById('palette-mono'),
-        analog: document.getElementById('palette-analog'),
-        comp: document.getElementById('palette-comp')
-    },
-    contrast: {
-        bg: document.getElementById('contrast-bg'),
-        fg: document.getElementById('contrast-fg'),
-        ratio: document.getElementById('wcag-ratio'),
-        grade: document.getElementById('wcag-grade')
-    },
-    nudge: document.getElementById('rate-us-nudge'),
-    btnRate: document.getElementById('btn-rate'),
-    btnShare: document.getElementById('btn-share')
-};
+document.addEventListener('DOMContentLoaded', () => {
+    const eyedropperBtn = document.getElementById('eyedropper-btn');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const colorPreview = document.getElementById('color-preview');
+    const hexVal = document.getElementById('hex-value');
+    const rgbVal = document.getElementById('rgb-value');
+    const hslVal = document.getElementById('hsl-value');
+    const historyContainer = document.getElementById('color-history');
 
-// State
-let state = {
-    currentHex: '#FFFFFF',
-    history: [],
-    pickCount: 0,
-    autoCopy: true
-};
+    // State
+    let currentColor = '#FFFFFF';
 
-// Initialize
-async function init() {
-    await loadState();
-    setupEventListeners();
-    updateUI(state.currentHex);
-    checkRateNudge();
-}
+    // Initialize
+    loadHistory();
+    initSpectrum();
 
-async function loadState() {
-    const result = await chrome.storage.local.get(['history', 'lastColor', 'pickCount', 'rated', 'autoCopy']);
-    if (result.history) state.history = result.history;
-    if (result.lastColor) state.currentHex = result.lastColor;
-    if (result.pickCount) state.pickCount = result.pickCount;
-    state.rated = result.rated || false;
-    state.autoCopy = result.autoCopy !== false; // Default true
-}
-
-function setupEventListeners() {
-    // EyeDropper
-    els.btnPick.addEventListener('click', async () => {
+    // --- Native EyeDropper API ---
+    eyedropperBtn.addEventListener('click', async () => {
         if (!window.EyeDropper) {
-            alert('Your browser does not support the EyeDropper API.');
+            alert('Your browser does not support the EyeDropper API');
             return;
         }
 
+        const eyeDropper = new EyeDropper();
+        // Close popup is NOT needed for EyeDropper API usually, but sometimes it helps perception.
+        // Actually, EyeDropper API works even if popup is open, but popup might hide page content.
+        // Chrome handles this by dismissing the popup usually unless we persist it.
+        // Let's try calling it directly.
+
         try {
-            const eyeDropper = new EyeDropper();
             const result = await eyeDropper.open();
-            processNewColor(result.sRGBHex);
+            const color = result.sRGBHex;
+            updateColor(color);
+            addToHistory(color);
+            copyToClipboard(color);
         } catch (e) {
-            console.log('User cancelled selection');
+            console.log('User canceled selection', e);
         }
     });
 
-    // Copy
-    els.btnCopy.addEventListener('click', () => {
-        navigator.clipboard.writeText(state.currentHex);
-        triggerConfetti(els.btnCopy);
-    });
-
-    // Tabs
-    els.tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            els.tabs.forEach(t => t.classList.remove('active'));
-            els.tabPanes.forEach(p => {
-                p.classList.remove('active');
-                p.style.display = 'none'; // Force hide for animation reset
+    // --- Page Analysis ---
+    analyzeBtn.addEventListener('click', () => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.tabs.sendMessage(tabs[0].id, { action: 'analyzePage' }, (response) => {
+                if (response && response.success) {
+                    displayAnalysisResults(response.data);
+                } else {
+                    console.error('Analysis failed or no response');
+                }
             });
-
-            tab.classList.add('active');
-            const target = document.getElementById(`tab-${tab.dataset.tab}`);
-            target.style.display = 'block';
-            requestAnimationFrame(() => target.classList.add('active'));
         });
     });
 
-    // Rate Us
-    els.btnRate.addEventListener('click', () => {
-        // Open Chrome Web Store URL (Placeholder)
-        window.open('https://chrome.google.com/webstore', '_blank');
-        els.nudge.classList.add('hidden');
-        chrome.storage.local.set({ rated: true });
-        triggerConfetti(els.btnRate);
-    });
+    // --- Canvas Spectrum Picker ---
+    function initSpectrum() {
+        const canvas = document.getElementById('spectrum-canvas');
+        const ctx = canvas.getContext('2d');
+        const hueSlider = document.getElementById('hue-slider');
 
-    // Share
-    els.btnShare.addEventListener('click', () => {
-        const text = `I just found this color ${state.currentHex} using Prisma!`;
-        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
-    });
+        let currentHue = 0;
 
-    // Settings
-    els.btnSettings.addEventListener('click', () => {
-        if (chrome.runtime.openOptionsPage) {
-            chrome.runtime.openOptionsPage();
-        } else {
-            window.open(chrome.runtime.getURL('src/options/options.html'));
+        function drawSpectrum() {
+            // Draw Saturation/Lightness Box
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Gradient 1: White to Color (Horizontal)
+            const gradientH = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradientH.addColorStop(0, '#fff');
+            gradientH.addColorStop(1, `hsl(${currentHue}, 100%, 50%)`);
+            ctx.fillStyle = gradientH;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Gradient 2: Transparent to Black (Vertical)
+            const gradientV = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradientV.addColorStop(0, 'rgba(0,0,0,0)');
+            gradientV.addColorStop(1, '#000');
+            ctx.fillStyle = gradientV;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
-    });
-}
 
-function processNewColor(hex) {
-    state.currentHex = hex;
-    updateUI(hex);
-    addToHistory(hex);
-    incrementPickCount();
+        drawSpectrum();
 
-    if (state.autoCopy) {
-        navigator.clipboard.writeText(hex);
-        triggerConfetti(els.btnPick); // Visual delight
-    }
-}
+        // Hue Slider Change
+        hueSlider.addEventListener('input', (e) => {
+            currentHue = e.target.value;
+            drawSpectrum();
+            // Update current color based on pointer fallback or center? 
+            // For simplicity, we just update the visual spectrum. 
+            // Ideally we track a selection cursor.
+        });
 
-function updateUI(hex) {
-    els.hexCode.textContent = hex;
-    els.colorPreview.style.backgroundColor = hex;
-    document.documentElement.style.setProperty('--primary', hex); // Dynamic theme
+        // Canvas Click
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
-    // Update Palettes
-    const palettes = generatePalettes(hex);
-    renderPaletteRow(els.palettes.mono, palettes.mono);
-    renderPaletteRow(els.palettes.analog, palettes.analog);
-    renderPaletteRow(els.palettes.comp, palettes.comp);
-
-    // Update Contrast
-    els.contrast.bg.style.backgroundColor = hex;
-    els.contrast.bg.textContent = hex;
-    // Simple check for best text color
-    const onWhite = getContrastRatio(hex, '#FFFFFF');
-    const onBlack = getContrastRatio(hex, '#000000');
-    const bestFg = onWhite > onBlack ? '#FFFFFF' : '#000000';
-
-    els.contrast.fg.style.backgroundColor = bestFg;
-    els.contrast.fg.style.color = hex; // Invert to be visible
-    els.contrast.bg.style.color = bestFg;
-    els.contrast.fg.textContent = bestFg;
-
-    const ratio = Math.max(onWhite, onBlack).toFixed(2);
-    els.contrast.ratio.textContent = `${ratio}:1`;
-    els.contrast.grade.textContent = ratio >= 4.5 ? 'AA' : (ratio >= 7 ? 'AAA' : 'Fail');
-    els.contrast.grade.className = `badge ${ratio >= 4.5 ? 'pass' : 'fail'}`;
-
-    chrome.storage.local.set({ lastColor: hex });
-}
-
-function addToHistory(hex) {
-    // Prevent duplicates at the top
-    if (state.history[0] === hex) return;
-
-    state.history.unshift(hex);
-    if (state.history.length > 50) state.history.pop();
-
-    chrome.storage.local.set({ history: state.history });
-    renderHistory();
-}
-
-function renderHistory() {
-    els.historyList.innerHTML = '';
-    if (state.history.length === 0) {
-        els.historyList.innerHTML = '<div class="empty-state">No colors picked yet.</div>';
-        return;
+            // Get pixel data
+            const pixel = ctx.getImageData(x, y, 1, 1).data;
+            const hex = ColorUtils.rgbToHex(pixel[0], pixel[1], pixel[2]);
+            updateColor(hex);
+            // Don't auto-add to history on spectrum click, only explicit picks? 
+            // Or maybe yes, let's keep it simple.
+            addToHistory(hex);
+        });
     }
 
-    state.history.forEach(hex => {
-        const item = document.createElement('div');
-        item.className = 'color-item';
-        item.style.backgroundColor = hex;
-        item.title = hex;
-        item.addEventListener('click', () => {
-            state.currentHex = hex;
-            updateUI(hex);
-        });
-        els.historyList.appendChild(item);
-    });
-}
+    // --- Core Functions ---
+    function updateColor(input) {
+        const formats = ColorUtils.getAllFormats(input);
+        if (formats) {
+            currentColor = formats.hex;
+            colorPreview.style.backgroundColor = formats.hex;
 
-function renderPaletteRow(container, colors) {
-    container.innerHTML = '';
-    if (!container || !colors) return;
-
-    container.style.display = 'flex';
-    container.style.gap = '8px';
-
-    colors.forEach(color => {
-        const div = document.createElement('div');
-        div.style.backgroundColor = color;
-        div.style.width = '30px';
-        div.style.height = '30px';
-        div.style.borderRadius = '50%';
-        div.style.cursor = 'pointer';
-        div.title = color;
-        div.addEventListener('click', () => {
-            navigator.clipboard.writeText(color);
-            triggerConfetti(div);
-        });
-        container.appendChild(div);
-    });
-}
-
-function incrementPickCount() {
-    chrome.runtime.sendMessage({ action: 'incrementPickCount' }, (response) => {
-        if (response) {
-            state.pickCount = response.count;
-            checkRateNudge();
+            hexVal.textContent = formats.hex;
+            rgbVal.textContent = formats.rgb;
+            hslVal.textContent = formats.hsl;
         }
+    }
+
+    function addToHistory(hex) {
+        chrome.storage.local.get(['colorHistory'], (result) => {
+            let history = result.colorHistory || [];
+            // Remove duplicate if exists to move to top
+            history = history.filter(c => c !== hex);
+            // Add to front
+            history.unshift(hex);
+            // Limit to 20
+            if (history.length > 20) history.pop();
+
+            chrome.storage.local.set({ colorHistory: history }, () => {
+                renderHistory(history);
+            });
+        });
+    }
+
+    function loadHistory() {
+        chrome.storage.local.get(['colorHistory'], (result) => {
+            if (result.colorHistory) {
+                renderHistory(result.colorHistory);
+                // Select first one if exists
+                if (result.colorHistory.length > 0) {
+                    updateColor(result.colorHistory[0]);
+                }
+            }
+        });
+    }
+
+    function renderHistory(history) {
+        historyContainer.innerHTML = '';
+        history.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch';
+            swatch.style.backgroundColor = color;
+            swatch.title = color;
+            swatch.addEventListener('click', () => {
+                updateColor(color);
+                copyToClipboard(color);
+            });
+            historyContainer.appendChild(swatch);
+        });
+    }
+
+    async function copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            // Visual feedback could be added here
+        } catch (err) {
+            console.error('Failed to copy', err);
+        }
+    }
+
+    function displayAnalysisResults(colors) {
+        const container = document.getElementById('analysis-results');
+        const grid = document.getElementById('dominant-colors-grid');
+        container.classList.remove('hidden');
+        grid.innerHTML = '';
+
+        colors.forEach(item => {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch';
+            swatch.style.backgroundColor = item.color;
+            swatch.title = `${item.color} (${item.count} occurrences)`;
+            swatch.addEventListener('click', () => {
+                updateColor(item.color);
+                copyToClipboard(item.color);
+            });
+            grid.appendChild(swatch);
+        });
+    }
+
+    // Copy buttons
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            const text = document.getElementById(targetId).textContent;
+            copyToClipboard(text);
+        });
     });
-}
-
-function checkRateNudge() {
-    // Logic: if count >= 20 and not rated yet
-    if (state.pickCount >= 20 && !state.rated) {
-        els.nudge.classList.remove('hidden');
-    } else {
-        els.nudge.classList.add('hidden');
-    }
-}
-
-// Simple Confetti effect
-function triggerConfetti(element) {
-    const rect = element.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-
-    for (let i = 0; i < 20; i++) {
-        const particle = document.createElement('div');
-        particle.style.position = 'fixed';
-        particle.style.left = `${x}px`;
-        particle.style.top = `${y}px`;
-        particle.style.width = '6px';
-        particle.style.height = '6px';
-        const color = ['#f43f5e', '#22d3ee', '#f472b6', '#34d399'][Math.floor(Math.random() * 4)];
-        particle.style.backgroundColor = color;
-        particle.style.borderRadius = '50%';
-        particle.style.pointerEvents = 'none';
-        particle.style.zIndex = '1000';
-        document.body.appendChild(particle);
-
-        const angle = Math.random() * Math.PI * 2;
-        const velocity = 2 + Math.random() * 4;
-        const tx = Math.cos(angle) * 50 * Math.random();
-        const ty = Math.sin(angle) * 50 * Math.random();
-
-        particle.animate([
-            { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-            { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
-        ], {
-            duration: 600,
-            easing: 'cubic-bezier(0, .9, .57, 1)',
-        }).onfinish = () => particle.remove();
-    }
-}
-
-// Start
-init();
+});

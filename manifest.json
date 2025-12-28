@@ -31,8 +31,23 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/utils/*.js"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "src/utils/*.js",
+        "icons/*.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
     }
   ]
 }
