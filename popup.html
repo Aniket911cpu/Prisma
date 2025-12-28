@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Advanced Color Picker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1><span class="logo-icon"></span>Color Picker</h1>
+      <button id="eyedropper-btn" class="icon-btn" title="Pick Color from Page">
+        <svg viewBox="0 0 24 24" width="20" height="20">
+            <path fill="currentColor" d="M17.5 5.5l-5 5 .7.7 5-5-.7-.7zm-8.8 8.8l-1.4 1.4L4 19l2.3-3.3 1.4-1.4.7.7zM20.7 4.3l-1-1c-.4-.4-1-.4-1.4 0l-1 .9-1.3 1.3-6.4 6.4-.7.7-2 2-2.8 2.8c-.4.4-.4 1 0 1.4l1 1c.4.4 1 .4 1.4 0l2.8-2.8 2-2 .7-.7 6.4-6.4 1.3-1.3.9-1c.4-.4.4-1.1 0-1.5zM6.5 17.5l1.4 1.4c-.1.1-.3.1-.4 0l-1-1c.1 0 .1-.3 0-.4z"/>
+        </svg>
+        <span>Pick Color</span>
+      </button>
+    </header>
+
+    <main>
+      <!-- Current Color Display -->
+      <section class="color-display">
+        <div id="color-preview" class="preview-box"></div>
+        <div class="color-values">
+          <div class="value-row">
+            <span class="label">HEX</span>
+            <code id="hex-value">#FFFFFF</code>
+            <button class="copy-btn" data-target="hex-value" title="Copy HEX">📋</button>
+          </div>
+          <div class="value-row">
+            <span class="label">RGB</span>
+            <code id="rgb-value">rgb(255, 255, 255)</code>
+            <button class="copy-btn" data-target="rgb-value" title="Copy RGB">📋</button>
+          </div>
+          <div class="value-row">
+            <span class="label">HSL</span>
+            <code id="hsl-value">hsl(0, 0%, 100%)</code>
+            <button class="copy-btn" data-target="hsl-value" title="Copy HSL">📋</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Advanced Picker (Spectrum) -->
+      <section class="spectrum-picker">
+        <!-- We use a canvas for the spectrum -->
+        <div class="spectrum-container">
+            <canvas id="spectrum-canvas" width="280" height="150"></canvas>
+            <input type="range" id="hue-slider" min="0" max="360" value="0" class="hue-slider">
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <section class="actions">
+        <button id="analyze-btn" class="secondary-btn">Analyze Page Colors</button>
+      </section>
+
+      <!-- History -->
+      <section class="history-section">
+        <h3>History</h3>
+        <div id="color-history" class="history-grid">
+          <!-- History items injected here -->
+        </div>
+      </section>
+      
+      <!-- Page Analysis Results (Hidden by default) -->
+      <section id="analysis-results" class="analysis-results hidden">
+          <h3>Dominant Colors</h3>
+          <div id="dominant-colors-grid" class="history-grid"></div>
+      </section>
+    </main>
+  </div>
+  <script src="color_utils.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
