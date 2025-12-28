@@ -1,132 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prisma</title>
-    <link rel="stylesheet" href="../../styles/variables.css">
-    <link rel="stylesheet" href="../../styles/common.css">
-    <link rel="stylesheet" href="popup.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prisma</title>
+  <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Material Icons for UI elements -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
-
-<body>
-
-    <!-- Header / Navigation -->
-    <header class="glass-card header-bar">
-        <div class="logo">
-            <img src="../../icons/icon-48.png" alt="Prisma" width="24" height="24">
-            <span class="font-bold">Prisma</span>
-        </div>
-        <nav class="nav-tabs">
-            <!-- SVGs for icons would go here, simplified text for now -->
-            <button class="nav-btn active" data-tab="picker" title="Picker">Color</button>
-            <button class="nav-btn" data-tab="palette" title="Palette">Palette</button>
-            <button class="nav-btn" data-tab="contrast" title="Contrast">WCAG</button>
-            <button class="icon-btn" id="open-settings" title="Settings">⚙️</button>
-        </nav>
+<body class="dark-mode">
+  <div class="app-container">
+    <!-- Header -->
+    <header class="glass-header">
+      <div class="brand">
+        <span class="material-icons-round logo-icon">palette</span>
+        <span class="brand-name">Prisma</span>
+      </div>
+      <button id="btn-settings" class="icon-btn" title="Settings">
+        <span class="material-icons-round">settings</span>
+      </button>
     </header>
 
+    <!-- Main Content -->
     <main>
+      <!-- Color Picker Section -->
+      <section class="picker-section">
+        <div class="color-preview-ring">
+          <div id="color-preview" class="color-preview"></div>
+          <button id="btn-pick" class="btn-pick">
+            <span class="material-icons-round">colorize</span>
+          </button>
+        </div>
+        <div class="hex-display">
+          <h1 id="hex-code">#FFFFFF</h1>
+          <button id="btn-copy" class="icon-btn-small" title="Copy">
+            <span class="material-icons-round">content_copy</span>
+          </button>
+        </div>
+      </section>
 
-        <!-- Tab: Picker & History -->
-        <section id="tab-picker" class="tab-content active">
+      <!-- Navigation Tabs -->
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="history">History</button>
+        <button class="tab-btn" data-tab="palettes">Palettes</button>
+        <button class="tab-btn" data-tab="contrast">Contrast</button>
+      </nav>
 
-            <!-- Big Action Button -->
-            <div class="hero-section">
-                <button id="btn-eyedropper" class="btn btn-hero w-full">
-                    <span class="icon">🖊️</span> Pick Color
-                </button>
-            </div>
+      <!-- Tab Content -->
+      <section class="tab-content">
+        <!-- History Tab -->
+        <div id="tab-history" class="tab-pane active">
+          <div id="history-list" class="color-grid">
+            <!-- Dynamic History Items -->
+            <div class="empty-state">No colors picked yet.</div>
+          </div>
+        </div>
 
-            <!-- Current Selection -->
-            <div class="glass-card color-card animate-fade-in">
-                <div id="preview-swatch" class="swatch-large"></div>
-                <div class="color-details">
-                    <div class="input-group">
-                        <label>HEX</label>
-                        <div class="copy-input">
-                            <input type="text" id="val-hex" readonly value="#FFFFFF">
-                            <button class="icon-btn copy-trig" data-target="val-hex">📋</button>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label>RGB</label>
-                        <div class="copy-input">
-                            <input type="text" id="val-rgb" readonly value="rgb(255, 255, 255)">
-                            <button class="icon-btn copy-trig" data-target="val-rgb">📋</button>
-                        </div>
-                    </div>
+        <!-- Palettes Tab -->
+        <div id="tab-palettes" class="tab-pane">
+          <div class="palette-group">
+            <h3>Monochromatic</h3>
+            <div id="palette-mono" class="palette-row"></div>
+          </div>
+          <div class="palette-group">
+            <h3>Analogous</h3>
+            <div id="palette-analog" class="palette-row"></div>
+          </div>
+          <div class="palette-group">
+            <h3>Complementary</h3>
+            <div id="palette-comp" class="palette-row"></div>
+          </div>
+        </div>
+
+        <!-- Contrast Tab -->
+        <div id="tab-contrast" class="tab-pane">
+            <div class="contrast-checker">
+                <div class="contrast-pair">
+                    <div class="contrast-swatch bg" id="contrast-bg">T</div>
+                    <div class="contrast-swatch fg" id="contrast-fg">T</div>
+                </div>
+                <div class="contrast-result">
+                    <span id="wcag-ratio">4.5:1</span>
+                    <span id="wcag-grade" class="badge">AA</span>
                 </div>
             </div>
-
-            <!-- Recent History -->
-            <div class="history-section">
-                <div class="section-header">
-                    <h3>Recent Colors</h3>
-                    <button class="text-xs btn-text" id="clear-history">Clear</button>
-                </div>
-                <div id="history-list" class="history-list custom-scroll">
-                    <!-- Injected Items -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Tab: Palette Generator -->
-        <section id="tab-palette" class="tab-content">
-            <div class="glass-card padded">
-                <div class="control-row">
-                    <label>Base Color</label>
-                    <div class="mini-swatch" id="palette-base"></div>
-                </div>
-                <div class="control-row">
-                    <select id="palette-type" class="full-select">
-                        <option value="monochromatic">Monochromatic</option>
-                        <option value="analogous">Analogous</option>
-                        <option value="complementary">Complementary</option>
-                    </select>
-                </div>
-
-                <div id="palette-output" class="palette-grid">
-                    <!-- Generated Swatches -->
-                </div>
-
-                <button id="btn-export-css" class="btn btn-secondary w-full mt-2">Export to CSS</button>
-            </div>
-        </section>
-
-        <!-- Tab: WCAG Contrast -->
-        <section id="tab-contrast" class="tab-content">
-            <div class="glass-card padded">
-                <div class="contrast-inputs">
-                    <div class="input-col">
-                        <label>Foreground</label>
-                        <input type="color" id="wcag-fg" value="#000000">
-                    </div>
-                    <div class="input-col">
-                        <label>Background</label>
-                        <input type="color" id="wcag-bg" value="#FFFFFF">
-                    </div>
-                </div>
-
-                <div class="wcag-result" id="wcag-result-box">
-                    <div class="ratio-display">
-                        <span id="wcag-ratio">21.0</span>
-                        <span class="ratio-label">:1</span>
-                    </div>
-                    <div class="grade-display">
-                        <span id="wcag-grade" class="badge badge-success">AAA</span>
-                    </div>
-                    <p class="wcag-desc">Excellent contrast.</p>
-                </div>
-            </div>
-        </section>
-
+        </div>
+      </section>
     </main>
 
-    <div id="toast" class="toast hidden">Copied to clipboard!</div>
-
-    <script type="module" src="popup.js"></script>
+    <!-- Footer -->
+    <footer class="glass-footer">
+      <div id="rate-us-nudge" class="nudge hidden">
+        <span>Enjoying Prisma?</span>
+        <button id="btn-rate" class="btn-text">
+            <span class="material-icons-round">favorite</span> Rate Us
+        </button>
+      </div>
+      <button id="btn-share" class="btn-share">
+        <span class="material-icons-round">share</span> Share
+      </button>
+    </footer>
+  </div>
+  <script type="module" src="popup.js"></script>
 </body>
-
 </html>

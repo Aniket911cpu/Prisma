@@ -1,0 +1,10 @@
+{
+    "appName": {
+        "message": "Prisma: The Ultimate Color Workflow Studio",
+        "description": "The name of the application"
+    },
+    "appDescription": {
+        "message": "A production-grade, aesthetically stunning color picker and workflow tool.",
+        "description": "The description of the application"
+    }
+}
