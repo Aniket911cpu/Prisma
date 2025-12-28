@@ -1,0 +1,78 @@
+/* 
+  Prisma Design System - Glassmorphism Theme 
+*/
+
+:root {
+    /* Brand Colors */
+    --primary: #6366f1;
+    /* Indigo 500 */
+    --primary-hover: #4f46e5;
+    --accent: #ec4899;
+    /* Pink 500 */
+
+    /* Neutral scale */
+    --bg-light: #f3f4f6;
+    --bg-dark: #111827;
+    --text-light: #1f2937;
+    --text-dark: #f9fafb;
+    --surface-light: rgba(255, 255, 255, 0.7);
+    --surface-dark: rgba(17, 24, 39, 0.7);
+
+    /* Glassmorphism */
+    --glass-blur: blur(12px);
+    --glass-border-light: 1px solid rgba(255, 255, 255, 0.4);
+    --glass-border-dark: 1px solid rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+
+    /* Radius & Spacing */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+
+    /* Typography */
+    --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+    /* Semantic Defaults (Light Mode) */
+    --bg-app: var(--bg-light);
+    --text-main: var(--text-light);
+    --surface: var(--surface-light);
+    --border: var(--glass-border-dark);
+    /* Subtle border */
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-app: var(--bg-dark);
+        --text-main: var(--text-dark);
+        --surface: var(--surface-dark);
+        --border: var(--glass-border-dark);
+    }
+}
+
+/* Base Reset */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-main);
+    background: var(--bg-app);
+    color: var(--text-main);
+    transition: background-color 0.3s, color 0.3s;
+    width: 360px;
+    /* Standard extension width */
+    min-height: 480px;
+}
+
+/* Glass Card Utility */
+.glass-card {
+    background: var(--surface);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--glass-shadow);
+}
